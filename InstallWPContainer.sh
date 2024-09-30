@@ -4,7 +4,7 @@
 
 # Ajout des dépôts Docker à Apt:
 sudo apt-get update
-sudo apt-get install ca-certificates curl
+sudo apt-get install -y ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -17,7 +17,7 @@ echo \
 sudo apt-get update
 
 # Installation de Docker:
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # Démarrage et activation de Docker:
 sudo systemctl start docker
@@ -28,7 +28,7 @@ sudo usermod -aG docker $USER
 
 # Installation de Docker Compose:
 sudo apt-get update
-sudo apt-get install docker-compose-plugin
+sudo apt-get install -y docker-compose-plugin
 
 # Création du dossier de travail:
 mkdir -p wordpress
