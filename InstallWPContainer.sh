@@ -33,7 +33,7 @@ sudo apt-get install docker-compose-plugin
 # Création du dossier de travail:
 mkdir -p wordpress
 
-cd wordpress
+cd wordpress || exit
 
 # Génération du fichier docker-compose.yml:
 echo "services:
@@ -76,6 +76,5 @@ volumes:
   data:
 " > docker-compose.yml
 
-
 # Démarrage des conteneurs:
-docker-compose up -d
+docker compose up -d
