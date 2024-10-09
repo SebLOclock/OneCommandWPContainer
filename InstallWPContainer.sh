@@ -35,11 +35,19 @@ mkdir -p wordpress
 
 cd wordpress || exit
 
+# Génération du fichier de configuration pour la gestion des taille de fichier à transmettre au serveur
+echo "file_uploads = On
+memory_limit = 64M
+upload_max_filesize = 64M
+post_max_size = 64M
+max_execution_time = 600" > uploads.ini
+
 # Génération du fichier docker-compose.yml:
 echo "services:
   devcontainer:
     image: wordpress
     volumes:
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
       - ../..:/workspaces:cached
       - ../wordpress:/var/www/html:cached
       - ~/.ssh:/root/.ssh:cached
@@ -51,6 +59,7 @@ echo "services:
       WORDPRESS_DEBUG: 1
     ports:
       - 80:80
+    restart: always
 
   db:
     image: mariadb:10
@@ -63,6 +72,7 @@ echo "services:
       - 3306:3306
     volumes:
       - data:/var/lib/mysql
+    restart: always
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
@@ -71,10 +81,15 @@ echo "services:
       PMA_PORT: 3306
     ports:
       - 8080:80
+    restart: always
     
 volumes:
   data:
 " > docker-compose.yml
+
+# Ajouter docker au démarrage de la machine
+systemctl enable docker
+
 
 # Démarrage des conteneurs:
 docker compose up -d
