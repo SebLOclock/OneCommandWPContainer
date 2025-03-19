@@ -2,7 +2,7 @@
 echo "
 if( ! defined('WP_MEMORY_LIMIT') ) {
   define('WP_MEMORY_LIMIT', '512M');
-}" >> ./wordpress/wp-config.php
+}" >> /var/www/html/wp-config.php
 
 # Mettre à jour les paramètres d'upload dans uploads.ini
 echo "
