@@ -36,20 +36,10 @@ mkdir -p wordpress
 cd wordpress || exit
 
 # Génération du fichier de configuration pour la gestion des taille de fichier à transmettre au serveur
-echo "
-; Activer les uploads de fichiers
-file_uploads = On
-
-; Taille maximale d'un fichier téléchargé
+echo "file_uploads = On
 upload_max_filesize = 5120M
-
-; Taille maximale des données POST, y compris les fichiers téléchargés
 post_max_size = 5120M
-
-; Nombre maximal de fichiers pouvant être téléchargés simultanément
 max_file_uploads = 20
-
-; Temps maximum d'exécution d'un script en secondes
 max_execution_time = 600
 " > uploads.ini
 
