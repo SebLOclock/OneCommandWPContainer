@@ -51,7 +51,7 @@ max_file_uploads = 20
 
 ; Temps maximum d'exécution d'un script en secondes
 max_execution_time = 600
-" > /usr/local/etc/php/conf.d/uploads.ini
+" > uploads.ini
 
 # Génération du fichier docker-compose.yml:
 echo "services:
