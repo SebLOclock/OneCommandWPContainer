@@ -8,4 +8,4 @@ rm -rf /home/$(whoami)/OneCommandWPContainer/uploads.ini
 # Docker rm
 docker rm $(docker ps -a -q) -f
 
-sh /home/$(whoami)/OneCommandWPContainer/InstallWPContainer.sh
+sh ./InstallWPContainer.sh
