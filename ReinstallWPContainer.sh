@@ -1,10 +1,15 @@
+#!/bin/bash
+
 # Suppression des conteneurs:
-cd /home/student/wordpress
-docker compose down
+cd wordpress || exit
+docker compose down -v
+
 # Suppression des fichiers:
-rm -rf /home/student/OneCommandWPContainer/wordpress
+rm -rf uploads.ini
+rm -rf docker-compose.yml
 
-# Docker rm
-docker rm $(docker ps -a -q) -f
+# Nettoyage des conteneurs Docker
+docker system prune -f
 
-sh ./InstallWPContainer.sh
+# Réinstallation
+sh ../InstallWPContainer.sh
