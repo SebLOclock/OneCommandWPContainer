@@ -37,8 +37,8 @@ cd wordpress || exit
 
 # Génération du fichier de configuration pour la gestion des taille de fichier à transmettre au serveur
 echo "file_uploads = On
-upload_max_filesize = 512M
-post_max_size = 512M
+upload_max_filesize = 1024M
+post_max_size = 1024M
 max_file_uploads = 20
 max_execution_time = 600
 memory_limit = 256M
