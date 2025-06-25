@@ -63,13 +63,22 @@ sendmail_from = contact@${SYSTEM_DOMAIN}
 sendmail_path = \"/usr/sbin/sendmail -t -i -f contact@${SYSTEM_DOMAIN}\"
 " > uploads.ini
 
-# Génération du script d'initialisation pour installer ssmtp (plus rapide que sendmail)
+# Génération du script d'initialisation qui préserve WordPress
 cat > init-wordpress.sh << INIT_EOF
 #!/bin/bash
-# Installation rapide de ssmtp et configuration du relais vers Postfix
+# Script qui préserve l'entrypoint WordPress original et ajoute SSMTP
+
+# D'abord, on laisse WordPress s'installer normalement
+/usr/local/bin/docker-entrypoint.sh apache2-foreground &
+APACHE_PID=\$!
+
+# On attend qu'Apache soit démarré
+sleep 10
+
+# Installation de SSMTP en arrière-plan
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq ssmtp
+apt-get update -qq >/dev/null 2>&1
+apt-get install -y -qq ssmtp >/dev/null 2>&1
 
 # Configuration ssmtp pour relayer vers Postfix
 cat > /etc/ssmtp/ssmtp.conf << 'SSMTP_EOF'
@@ -82,8 +91,8 @@ SSMTP_EOF
 # Lien symbolique pour sendmail
 ln -sf /usr/sbin/ssmtp /usr/sbin/sendmail
 
-# Démarrage d'Apache
-exec apache2-foreground
+# On rejoint le processus Apache
+wait \$APACHE_PID
 INIT_EOF
 
 chmod +x init-wordpress.sh
