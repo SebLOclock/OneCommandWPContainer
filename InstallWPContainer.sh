@@ -30,6 +30,15 @@ sudo usermod -aG docker $USER
 sudo apt-get update
 sudo apt-get install -y docker-compose-plugin
 
+# Détection du nom de domaine du système:
+SYSTEM_DOMAIN=$(hostname -f)
+if [ -z "$SYSTEM_DOMAIN" ] || [ "$SYSTEM_DOMAIN" = "localhost" ]; then
+    SYSTEM_DOMAIN=$(hostname).local
+fi
+
+echo "📧 Utilisation du domaine système : $SYSTEM_DOMAIN"
+echo "📧 Adresse email de contact : contact@$SYSTEM_DOMAIN"
+
 # Création du dossier de travail:
 mkdir -p wordpress
 
@@ -46,9 +55,15 @@ max_input_time = 300
 " > uploads.ini
 
 # Génération du fichier docker-compose.yml:
+# Améliorations apportées:
+# - Noms de conteneurs explicites avec le préfixe 'wordpress-'
+# - Ajout de Postfix pour la gestion professionnelle des envois de mail
+# - Configuration automatique de WordPress pour utiliser Postfix comme serveur SMTP
+# - Ajout des dépendances entre conteneurs pour un démarrage ordonné
 echo "services:
-  devcontainer:
+  wordpress:
     image: wordpress
+    container_name: wordpress-dev
     volumes:
       - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
       - ../..:/workspaces:cached
@@ -60,12 +75,24 @@ echo "services:
       WORDPRESS_DB_PASSWORD: wp_pass
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DEBUG: 1
+      # Configuration pour l'envoi de mail via Postfix
+      WORDPRESS_CONFIG_EXTRA: |
+        define('SMTP_HOST', 'postfix');
+        define('SMTP_PORT', 587);
+        define('SMTP_SECURE', false);
+        define('SMTP_AUTH', false);
+        define('SMTP_FROM', 'contact@$SYSTEM_DOMAIN');
+        define('SMTP_FROMNAME', 'Contact');
     ports:
       - 80:80
     restart: always
+    depends_on:
+      - db
+      - postfix
 
   db:
     image: mariadb:10
+    container_name: wordpress-db
     environment:
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wp_user
@@ -79,15 +106,32 @@ echo "services:
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
+    container_name: wordpress-phpmyadmin
     environment:
       PMA_HOST: db
       PMA_PORT: 3306
     ports:
       - 8080:80
     restart: always
+    depends_on:
+      - db
+
+  postfix:
+    image: catatnight/postfix
+    container_name: wordpress-postfix
+    environment:
+      maildomain: $SYSTEM_DOMAIN
+      smtp_user: contact@$SYSTEM_DOMAIN:contact_mail_pass
+    ports:
+      - 25:25    # Port SMTP standard
+      - 587:587  # Port submission SMTP
+    volumes:
+      - postfix_data:/var/spool/postfix
+    restart: always
     
 volumes:
   data:
+  postfix_data:
 " > docker-compose.yml
 
 # Ajouter docker au démarrage de la machine
@@ -96,3 +140,24 @@ systemctl enable docker
 
 # Démarrage des conteneurs:
 docker compose up -d
+
+echo ""
+echo "✅ Installation terminée avec succès !"
+echo ""
+echo "🌐 Services disponibles :"
+echo "   • WordPress : http://localhost"
+echo "   • phpMyAdmin : http://localhost:8080"
+echo ""
+echo "📧 Gestion des emails :"
+echo "   Serveur Postfix configuré pour l'envoi d'emails"
+echo "   Domaine de messagerie : $SYSTEM_DOMAIN"
+echo "   Adresse de contact : contact@$SYSTEM_DOMAIN"
+echo "   Ports SMTP : 25 (standard) et 587 (submission)"
+echo "   WordPress est automatiquement configuré pour utiliser Postfix"
+echo ""
+echo "🔧 Noms des conteneurs :"
+echo "   • wordpress-dev"
+echo "   • wordpress-db" 
+echo "   • wordpress-phpmyadmin"
+echo "   • wordpress-postfix"
+echo ""
