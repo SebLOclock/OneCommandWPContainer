@@ -104,7 +104,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq >/dev/null 2>&1
 apt-get install -y -qq ssmtp >/dev/null 2>&1
 
-# Configuration ssmtp pour relayer vers Postfix
+# Configuration SSMTP pour envoi via Postfix
 cat > /etc/ssmtp/ssmtp.conf << 'SSMTP_EOF'
 root=contact@${SYSTEM_DOMAIN}
 mailhub=postfix:587
@@ -121,46 +121,17 @@ INIT_EOF
 
 chmod +x init-wordpress.sh
 
-# Génération d'un fichier de configuration alternative pour relais SMTP externe
-cat > docker-compose-relay.yml.example << 'RELAY_EOF'
-# CONFIGURATION ALTERNATIVE : Utiliser un relais SMTP externe (Gmail, SendGrid, etc.)
-# Renommez ce fichier en docker-compose.yml et modifiez les variables ci-dessous
 
-# Variables à modifier :
-# RELAYHOST: smtp.gmail.com:587 (ou votre provider SMTP)
-# RELAYHOST_USERNAME: votre-email@gmail.com
-# RELAYHOST_PASSWORD: votre-mot-de-passe-app
-
-services:
-  postfix:
-    image: boky/postfix
-    container_name: wordpress-postfix
-    environment:
-      HOSTNAME: votre-domaine.com
-      ALLOWED_SENDER_DOMAINS: votre-domaine.com
-      # Configuration pour relais SMTP externe
-      RELAYHOST: smtp.gmail.com:587
-      RELAYHOST_USERNAME: votre-email@gmail.com
-      RELAYHOST_PASSWORD: votre-mot-de-passe-app
-      RELAYHOST_TLS_LEVEL: encrypt
-    ports:
-      - 25:25
-      - 587:587
-    volumes:
-      - postfix_data:/var/spool/postfix
-    restart: always
-RELAY_EOF
 
 # Génération du fichier docker-compose.yml:
 # Améliorations apportées:
 # - Noms de conteneurs explicites avec le préfixe 'wordpress-'
-# - Ajout de Postfix pour la gestion professionnelle des envois de mail
-# - Installation automatique de SSMTP dans WordPress avec relais vers Postfix
-# - Configuration PHP pour l'envoi d'emails via contact@[domaine_système]
-# - Détection intelligente du domaine public (serveurs cloud eddi.xyz → eddi.cloud)
-# - Ajout des dépendances entre conteneurs pour un démarrage ordonné
-# - Healthcheck pour MariaDB pour éviter les problèmes de timing de connexion
-# - WordPress attend que la base soit complètement prête avant de démarrer
+# - Ajout de Postfix pour l'envoi direct d'emails (pas de relais)
+# - Installation automatique de SSMTP dans WordPress vers Postfix
+# - Configuration automatique email : contact@[domaine_détecté]
+# - Détection intelligente du domaine public (serveurs cloud)
+# - Healthcheck MariaDB et dépendances ordonnées
+# - WordPress opérationnel immédiatement
 cat > docker-compose.yml << EOF
 services:
   wordpress:
@@ -223,17 +194,10 @@ services:
     environment:
       HOSTNAME: ${SYSTEM_DOMAIN}
       ALLOWED_SENDER_DOMAINS: ${SYSTEM_DOMAIN}
-      # Configuration pour autoriser l'envoi vers l'extérieur
-      RELAY_DOMAINS: ""
       MYNETWORKS: "127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 172.16.0.0/12 192.168.0.0/16 10.0.0.0/8"
-      SMTPD_RECIPIENT_RESTRICTIONS: "permit_mynetworks,permit_sasl_authenticated,reject_unauth_destination"
-      SMTPD_RELAY_RESTRICTIONS: "permit_mynetworks,permit_sasl_authenticated,defer_unauth_destination"
-      # Permettre l'envoi direct vers tous les domaines
-      POSTFIX_myhostname: ${SYSTEM_DOMAIN}
-      POSTFIX_mydestination: "localhost"
     ports:
-      - 25:25    # Port SMTP standard
-      - 587:587  # Port submission SMTP
+      - 25:25
+      - 587:587
     volumes:
       - postfix_data:/var/spool/postfix
     restart: always

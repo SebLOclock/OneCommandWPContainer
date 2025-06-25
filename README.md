@@ -206,4 +206,6 @@ En cas de problème :
 
 ---
 
-🎯 **WordPress est accessible immédiatement, emails fonctionnels après 2-3 minutes !**
+🎯 **WordPress est accessible immédiatement !**  
+📧 **Emails automatiquement configurés et fonctionnels après 2-3 minutes !**  
+🔍 **Détection intelligente du domaine pour tous types de serveurs !**
