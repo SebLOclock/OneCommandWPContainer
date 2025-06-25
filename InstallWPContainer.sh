@@ -106,8 +106,7 @@ services:
     volumes:
       - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
       - ./init-wordpress.sh:/init-wordpress.sh:ro
-      - ../..:/workspaces:cached
-      - ../wordpress:/var/www/html:cached
+      - wordpress_files:/var/www/html
       - ~/.ssh:/root/.ssh:cached
     environment:
       WORDPRESS_DB_HOST: db
@@ -115,7 +114,7 @@ services:
       WORDPRESS_DB_PASSWORD: wp_pass
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DEBUG: 1
-    ports:
+ex    ports:
       - 80:80
     restart: always
     depends_on:
@@ -173,6 +172,7 @@ services:
 volumes:
   data:
   postfix_data:
+  wordpress_files:
 EOF
 
 # Ajouter docker au démarrage de la machine
