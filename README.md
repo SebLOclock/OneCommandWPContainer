@@ -20,10 +20,10 @@ Un seul script pour déployer WordPress, MariaDB, phpMyAdmin et Postfix avec ges
 
 ### 📧 **Gestion avancée des emails**
 - **SSMTP** installé automatiquement dans WordPress
-- **Configuration automatique** du relais vers Postfix
+- **Configuration automatique** via Postfix (envoi direct)
 - **Détection intelligente du domaine** (serveurs cloud .eddi.xyz → .eddi.cloud)
 - **Adresse contact@[votre-domaine]** configurée automatiquement
-- **Alternative Gmail** prête à l'emploi pour serveurs cloud
+- **Envoi direct** sans configuration complexe
 
 ### 🔧 **Configuration optimisée**
 - **Noms de conteneurs explicites** (wordpress-dev, wordpress-db, etc.)
@@ -95,27 +95,19 @@ sudo bash InstallWPContainer.sh
 
 ## 📧 Configuration des emails
 
-### 🟢 **Mode automatique (par défaut)**
-Les emails sont envoyés directement via Postfix avec le domaine détecté :
-- ✅ **Adresse automatique** : `contact@[votre-domaine-détecté]`
-- ✅ **Configuration SSMTP** : Automatique via relais Postfix
-- ⚠️ Peut être bloqué sur certains hébergeurs cloud (port 25)
-
-### 🔵 **Mode Gmail (serveurs cloud)**
-Si les emails ne fonctionnent pas, utilisez Gmail comme relais :
-
-1. **Préparez Gmail** : Validation 2 étapes + mot de passe d'application
-2. **Éditez** : `cd wordpress && nano docker-compose-gmail.yml`  
-3. **Activez** : `cp docker-compose-gmail.yml docker-compose.yml && docker compose up -d`
+**Envoi direct automatique** via Postfix avec le domaine détecté :
+- ✅ **Détection automatique** du domaine public 
+- ✅ **Adresse configurée** : `contact@[votre-domaine-détecté]`
+- ✅ **SSMTP + Postfix** : Configuration transparente
+- ✅ **Aucune configuration** manuelle requise
 
 ## 📁 Fichiers générés
 
 ```
 wordpress/
-├── docker-compose.yml              # Configuration principale
-├── docker-compose-gmail.yml        # Configuration Gmail alternative  
-├── uploads.ini                     # Configuration PHP
-└── init-wordpress.sh              # Script d'initialisation SSMTP
+├── docker-compose.yml    # Configuration complète
+├── uploads.ini           # Configuration PHP
+└── init-wordpress.sh     # Script d'initialisation SSMTP
 ```
 
 ## 🔧 Gestion des conteneurs
@@ -174,8 +166,7 @@ sudo bash InstallWPContainer.sh
    docker compose logs postfix | grep reject
    ```
 
-3. **Si "Access denied"** → Utilisez la configuration Gmail
-4. **Si pas d'erreur** → Vérifiez vos spams
+3. **Vérifiez vos spams** ou contactez votre hébergeur si le port 25 est bloqué
 
 ### Base de données inaccessible
 ```bash
@@ -190,12 +181,12 @@ docker compose restart db
 Le script est optimisé pour les serveurs cloud (AWS, OVH, DigitalOcean, etc.) :
 
 - ✅ **Détection intelligente** du domaine public (conversion .eddi.xyz → .eddi.cloud)
-- ✅ **Configuration réseau** adaptée aux environnements cloud
-- ✅ **Alternative Gmail** pour contournement des restrictions SMTP
+- ✅ **Configuration automatique** adaptée aux environnements cloud
+- ✅ **Envoi direct SMTP** via Postfix (ports 25/587)
 - ✅ **Healthchecks** pour démarrage fiable
 - ✅ **Messages simplifiés** pour un retour d'information clair
 
-**Nouveauté** : Le script reconnaît automatiquement les serveurs cloud et adapte la configuration email pour une compatibilité maximale.
+**Le script reconnaît automatiquement les serveurs cloud et configure les emails avec le domaine public réel.**
 
 ## 📞 Support
 
