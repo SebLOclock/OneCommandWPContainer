@@ -86,7 +86,7 @@ services:
         define('SMTP_SECURE', false);
         define('SMTP_AUTH', false);
         define('SMTP_FROM', 'contact@${SYSTEM_DOMAIN}');
-        define('SMTP_FROMNAME', 'Contact');
+        define('SMTP_FROMNAME', 'Contactgg');
     ports:
       - 80:80
     restart: always
