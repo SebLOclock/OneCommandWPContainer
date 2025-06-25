@@ -63,22 +63,26 @@ sendmail_from = contact@${SYSTEM_DOMAIN}
 sendmail_path = \"/usr/sbin/sendmail -t -i -f contact@${SYSTEM_DOMAIN}\"
 " > uploads.ini
 
-# Génération du script d'initialisation pour installer sendmail et configurer le relais SMTP
+# Génération du script d'initialisation pour installer ssmtp (plus rapide que sendmail)
 cat > init-wordpress.sh << INIT_EOF
 #!/bin/bash
-# Installation de sendmail et configuration du relais vers Postfix
-apt-get update
-apt-get install -y sendmail sendmail-cf
+# Installation rapide de ssmtp et configuration du relais vers Postfix
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq
+apt-get install -y -qq ssmtp
 
-# Configuration de sendmail pour relayer vers Postfix
-echo "define(\\\`SMART_HOST', \\\`postfix')dnl" >> /etc/mail/sendmail.mc
-echo "define(\\\`confDOMAIN_NAME', \\\`${SYSTEM_DOMAIN}')dnl" >> /etc/mail/sendmail.mc
+# Configuration ssmtp pour relayer vers Postfix
+cat > /etc/ssmtp/ssmtp.conf << 'SSMTP_EOF'
+root=contact@${SYSTEM_DOMAIN}
+mailhub=postfix:587
+hostname=${SYSTEM_DOMAIN}
+FromLineOverride=YES
+SSMTP_EOF
 
-# Reconstruction de la configuration sendmail
-make -C /etc/mail
-service sendmail restart
+# Lien symbolique pour sendmail
+ln -sf /usr/sbin/ssmtp /usr/sbin/sendmail
 
-# Démarrage d'Apache (comme le script original)
+# Démarrage d'Apache
 exec apache2-foreground
 INIT_EOF
 
@@ -190,8 +194,8 @@ echo "   Serveur Postfix configuré pour l'envoi d'emails"
 echo "   Domaine de messagerie : $SYSTEM_DOMAIN"
 echo "   Adresse de contact : contact@$SYSTEM_DOMAIN"
 echo "   Ports SMTP : 25 (standard) et 587 (submission)"
-echo "   Sendmail installé dans WordPress et configuré pour relayer vers Postfix"
-echo "   WordPress peut maintenant envoyer des emails automatiquement"
+echo "   SSMTP installé dans WordPress et configuré pour relayer vers Postfix"
+echo "   WordPress peut maintenant envoyer des emails automatiquement (plus rapide)"
 echo ""
 echo "🔧 Noms des conteneurs :"
 echo "   • wordpress-dev"
