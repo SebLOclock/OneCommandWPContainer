@@ -1,0 +1,77 @@
+services:
+  wordpress:
+    image: wordpress
+    container_name: wordpress-dev
+    command: ["/init-wordpress.sh"]
+    volumes:
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+      - ./init-wordpress.sh:/init-wordpress.sh:ro
+      - ~/.ssh:/root/.ssh:cached
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wp_user
+      WORDPRESS_DB_PASSWORD: wp_pass
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DEBUG: 1
+    ports:
+      - 80:80
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      postfix:
+        condition: service_started
+
+  db:
+    image: mariadb:10
+    container_name: wordpress-db
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wp_user
+      MYSQL_PASSWORD: wp_pass
+      MYSQL_RANDOM_ROOT_PASSWORD: '1'
+    ports:
+      - 3306:3306
+    volumes:
+      - data:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      timeout: 20s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: wordpress-phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+    ports:
+      - 8080:80
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+
+  postfix:
+    image: boky/postfix
+    container_name: wordpress-postfix
+    environment:
+      # CHANGEZ CES VALEURS :
+      HOSTNAME: sebloclock-server.eddi.cloud
+      ALLOWED_SENDER_DOMAINS: sebloclock-server.eddi.cloud
+      # Configuration Gmail - REMPLACEZ par vos vraies données :
+      RELAYHOST: smtp.gmail.com:587
+      RELAYHOST_USERNAME: VOTRE-EMAIL@gmail.com
+      RELAYHOST_PASSWORD: VOTRE-MOT-DE-PASSE-APP
+      RELAYHOST_TLS_LEVEL: encrypt
+    ports:
+      - 25:25
+      - 587:587
+    volumes:
+      - postfix_data:/var/spool/postfix
+    restart: always
+    
+volumes:
+  data:
+  postfix_data: 
