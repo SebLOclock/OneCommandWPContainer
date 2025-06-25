@@ -47,7 +47,7 @@ mkdir -p wordpress
 
 cd wordpress || exit
 
-# Génération du fichier de configuration pour la gestion des taille de fichier à transmettre au serveur
+# Génération du fichier de configuration PHP pour uploads et SMTP
 echo "file_uploads = On
 upload_max_filesize = 1024M
 post_max_size = 1024M
@@ -55,21 +55,53 @@ max_file_uploads = 20
 max_execution_time = 600
 memory_limit = 256M
 max_input_time = 300
+
+; Configuration SMTP pour Postfix
+SMTP = postfix
+smtp_port = 587
+sendmail_from = contact@${SYSTEM_DOMAIN}
+sendmail_path = \"/usr/sbin/sendmail -t -i -f contact@${SYSTEM_DOMAIN}\"
 " > uploads.ini
+
+# Génération du script d'initialisation pour installer sendmail et configurer le relais SMTP
+cat > init-wordpress.sh << INIT_EOF
+#!/bin/bash
+# Installation de sendmail et configuration du relais vers Postfix
+apt-get update
+apt-get install -y sendmail sendmail-cf
+
+# Configuration de sendmail pour relayer vers Postfix
+echo "define(\\\`SMART_HOST', \\\`postfix')dnl" >> /etc/mail/sendmail.mc
+echo "define(\\\`confDOMAIN_NAME', \\\`${SYSTEM_DOMAIN}')dnl" >> /etc/mail/sendmail.mc
+
+# Reconstruction de la configuration sendmail
+make -C /etc/mail
+service sendmail restart
+
+# Démarrage d'Apache (comme le script original)
+exec apache2-foreground
+INIT_EOF
+
+chmod +x init-wordpress.sh
 
 # Génération du fichier docker-compose.yml:
 # Améliorations apportées:
 # - Noms de conteneurs explicites avec le préfixe 'wordpress-'
 # - Ajout de Postfix pour la gestion professionnelle des envois de mail
-# - Configuration automatique de WordPress pour utiliser Postfix comme serveur SMTP
+# - Installation automatique de sendmail dans WordPress avec relais vers Postfix
+# - Configuration PHP pour l'envoi d'emails via contact@[domaine_système]
 # - Ajout des dépendances entre conteneurs pour un démarrage ordonné
+# - Healthcheck pour MariaDB pour éviter les problèmes de timing de connexion
+# - WordPress attend que la base soit complètement prête avant de démarrer
 cat > docker-compose.yml << EOF
 services:
   wordpress:
     image: wordpress
     container_name: wordpress-dev
+    command: ["/init-wordpress.sh"]
     volumes:
       - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+      - ./init-wordpress.sh:/init-wordpress.sh:ro
       - ../..:/workspaces:cached
       - ../wordpress:/var/www/html:cached
       - ~/.ssh:/root/.ssh:cached
@@ -79,20 +111,18 @@ services:
       WORDPRESS_DB_PASSWORD: wp_pass
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DEBUG: 1
-      # Configuration pour l'envoi de mail via Postfix
-      WORDPRESS_CONFIG_EXTRA: |
-        define('SMTP_HOST', 'postfix');
-        define('SMTP_PORT', 587);
-        define('SMTP_SECURE', false);
-        define('SMTP_AUTH', false);
-        define('SMTP_FROM', 'contact@${SYSTEM_DOMAIN}');
-        define('SMTP_FROMNAME', 'Contactgg');
+e
+
+
+
     ports:
       - 80:80
     restart: always
     depends_on:
-      - db
-      - postfix
+      db:
+        condition: service_healthy
+      postfix:
+        condition: service_started
 
   db:
     image: mariadb:10
@@ -107,6 +137,10 @@ services:
     volumes:
       - data:/var/lib/mysql
     restart: always
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      timeout: 20s
+      retries: 10
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
@@ -118,7 +152,8 @@ services:
       - 8080:80
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   postfix:
     image: boky/postfix
@@ -159,11 +194,17 @@ echo "   Serveur Postfix configuré pour l'envoi d'emails"
 echo "   Domaine de messagerie : $SYSTEM_DOMAIN"
 echo "   Adresse de contact : contact@$SYSTEM_DOMAIN"
 echo "   Ports SMTP : 25 (standard) et 587 (submission)"
-echo "   WordPress est automatiquement configuré pour utiliser Postfix"
+echo "   Sendmail installé dans WordPress et configuré pour relayer vers Postfix"
+echo "   WordPress peut maintenant envoyer des emails automatiquement"
 echo ""
 echo "🔧 Noms des conteneurs :"
 echo "   • wordpress-dev"
 echo "   • wordpress-db" 
 echo "   • wordpress-phpmyadmin"
 echo "   • wordpress-postfix"
+echo ""
+echo "⚡ Améliorations du démarrage :"
+echo "   • Healthcheck MariaDB pour éviter les erreurs de timing"
+echo "   • WordPress attend que la base soit complètement prête"
+echo "   • Démarrage ordonné et fiable des services"
 echo ""
