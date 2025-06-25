@@ -1,5 +1,7 @@
 #!/bin/bash
 
+git pull
+
 # Suppression des conteneurs:
 cd wordpress || exit
 docker compose down -v

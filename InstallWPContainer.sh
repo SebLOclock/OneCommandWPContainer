@@ -30,16 +30,40 @@ sudo usermod -aG docker $USER
 sudo apt-get update
 sudo apt-get install -y docker-compose-plugin
 
-# Détection du nom de domaine du système:
+# Détection intelligente du nom de domaine du système:
 SYSTEM_HOSTNAME=$(hostname)
-SYSTEM_DOMAIN=$(hostname -f)
+SYSTEM_DOMAIN_FULL=$(hostname -f)
 
-# Si le domaine complet n'est pas disponible ou si c'est localhost, on crée un domaine local
-if [ -z "$SYSTEM_DOMAIN" ] || [ "$SYSTEM_DOMAIN" = "localhost" ] || [ "$SYSTEM_DOMAIN" = "$SYSTEM_HOSTNAME" ]; then
-    SYSTEM_DOMAIN="${SYSTEM_HOSTNAME}.local"
+# Détection du domaine public réel (serveur cloud)
+# Essayer de détecter le domaine public via les commandes disponibles
+PUBLIC_DOMAIN=""
+
+# Méthode 1 : Via curl et services de détection (si disponible)
+if command -v curl >/dev/null 2>&1; then
+    # Essayer de récupérer le nom public via différentes méthodes
+    PUBLIC_DOMAIN=$(curl -s --max-time 3 https://api.ipify.org 2>/dev/null | xargs -I {} nslookup {} 2>/dev/null | grep "name =" | cut -d" " -f3 | sed 's/\.$//' 2>/dev/null || echo "")
 fi
 
-echo "📧 Utilisation du domaine système : $SYSTEM_DOMAIN"
+# Méthode 2 : Nettoyer le hostname système pour supprimer les extensions internes
+CLEAN_DOMAIN=$(echo "$SYSTEM_DOMAIN_FULL" | sed 's/\.cloud\.eddi\.xyz.*/.eddi.cloud/' | sed 's/\.local$//')
+
+# Sélection du meilleur domaine
+if [ -n "$PUBLIC_DOMAIN" ] && [ "$PUBLIC_DOMAIN" != "" ]; then
+    SYSTEM_DOMAIN="$PUBLIC_DOMAIN"
+elif [[ "$SYSTEM_DOMAIN_FULL" == *".eddi.xyz"* ]]; then
+    # Cas spécifique serveur cloud eddi.xyz -> conversion vers .eddi.cloud
+    SYSTEM_DOMAIN=$(echo "$SYSTEM_DOMAIN_FULL" | sed 's/\.cloud\.eddi\.xyz.*/.eddi.cloud/')
+elif [ -n "$CLEAN_DOMAIN" ] && [ "$CLEAN_DOMAIN" != "" ]; then
+    SYSTEM_DOMAIN="$CLEAN_DOMAIN"
+elif [ -z "$SYSTEM_DOMAIN_FULL" ] || [ "$SYSTEM_DOMAIN_FULL" = "localhost" ] || [ "$SYSTEM_DOMAIN_FULL" = "$SYSTEM_HOSTNAME" ]; then
+    SYSTEM_DOMAIN="${SYSTEM_HOSTNAME}.local"
+else
+    SYSTEM_DOMAIN="$SYSTEM_DOMAIN_FULL"
+fi
+
+echo "🔍 Détection du domaine système :"
+echo "   Hostname complet détecté : $SYSTEM_DOMAIN_FULL"
+echo "   Domaine public utilisé : $SYSTEM_DOMAIN"
 echo "📧 Adresse email de contact : contact@$SYSTEM_DOMAIN"
 
 # Création du dossier de travail:
@@ -131,8 +155,9 @@ RELAY_EOF
 # Améliorations apportées:
 # - Noms de conteneurs explicites avec le préfixe 'wordpress-'
 # - Ajout de Postfix pour la gestion professionnelle des envois de mail
-# - Installation automatique de sendmail dans WordPress avec relais vers Postfix
+# - Installation automatique de SSMTP dans WordPress avec relais vers Postfix
 # - Configuration PHP pour l'envoi d'emails via contact@[domaine_système]
+# - Détection intelligente du domaine public (serveurs cloud eddi.xyz → eddi.cloud)
 # - Ajout des dépendances entre conteneurs pour un démarrage ordonné
 # - Healthcheck pour MariaDB pour éviter les problèmes de timing de connexion
 # - WordPress attend que la base soit complètement prête avant de démarrer
@@ -226,46 +251,19 @@ systemctl enable docker
 docker compose up -d
 
 echo ""
-echo "✅ Installation terminée avec succès !"
+echo "🎉 Installation WordPress terminée !"
 echo ""
-echo "🌐 Services disponibles :"
-echo "   • WordPress : http://localhost"
-echo "   • phpMyAdmin : http://localhost:8080"
+echo "🌐 Accès aux services :"
+echo "   • WordPress    : http://localhost"
+echo "   • phpMyAdmin   : http://localhost:8080"
 echo ""
-echo "📧 Gestion des emails :"
-echo "   Serveur Postfix configuré pour l'envoi d'emails"
-echo "   Domaine de messagerie : $SYSTEM_DOMAIN"
-echo "   Adresse de contact : contact@$SYSTEM_DOMAIN"
-echo "   Ports SMTP : 25 (standard) et 587 (submission)"
-echo "   SSMTP sera installé automatiquement dans WordPress"
+echo "📧 Configuration email :"
+echo "   • Domaine      : $SYSTEM_DOMAIN"
+echo "   • Expéditeur   : contact@$SYSTEM_DOMAIN"
+echo "   • Serveur SMTP : Postfix (ports 25/587)"
 echo ""
-echo "⏳ IMPORTANT - Configuration des emails :"
-echo "   WordPress est accessible IMMÉDIATEMENT"
-echo "   ⚠️  Patientez 2-3 minutes pour la configuration complète des emails"
-echo "   Les emails ne fonctionneront qu'après cette installation automatique"
+echo "⏳ WordPress est accessible immédiatement"
+echo "⚠️  Emails opérationnels dans 2-3 minutes"
 echo ""
-echo "📧 ATTENTION - Envoi d'emails sur serveur cloud :"
-echo "   Postfix est configuré pour l'envoi direct vers l'extérieur"
-echo "   ⚠️  Certains hébergeurs cloud bloquent le port 25 sortant"
-echo "   Si les emails ne fonctionnent pas :"
-echo "   1. Modifiez docker-compose-relay.yml.example"
-echo "   2. Remplacez docker-compose.yml par ce fichier"
-echo "   3. Redémarrez : docker compose down && docker compose up -d"
-echo ""
-echo "🔧 Noms des conteneurs :"
-echo "   • wordpress-dev"
-echo "   • wordpress-db" 
-echo "   • wordpress-phpmyadmin"
-echo "   • wordpress-postfix"
-echo ""
-echo "📁 Fichiers générés :"
-echo "   • docker-compose.yml (configuration principale)"
-echo "   • docker-compose-relay.yml.example (alternative avec relais SMTP)"
-echo "   • uploads.ini (configuration PHP)"
-echo "   • init-wordpress.sh (script d'initialisation SSMTP)"
-echo ""
-echo "⚡ Améliorations du démarrage :"
-echo "   • Healthcheck MariaDB pour éviter les erreurs de timing"
-echo "   • WordPress attend que la base soit complètement prête"
-echo "   • Démarrage ordonné et fiable des services"
+echo "🛠️  Conteneurs : wordpress-dev, wordpress-db, wordpress-phpmyadmin, wordpress-postfix"
 echo ""
