@@ -111,10 +111,6 @@ services:
       WORDPRESS_DB_PASSWORD: wp_pass
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DEBUG: 1
-e
-
-
-
     ports:
       - 80:80
     restart: always
