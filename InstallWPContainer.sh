@@ -97,6 +97,36 @@ INIT_EOF
 
 chmod +x init-wordpress.sh
 
+# Génération d'un fichier de configuration alternative pour relais SMTP externe
+cat > docker-compose-relay.yml.example << 'RELAY_EOF'
+# CONFIGURATION ALTERNATIVE : Utiliser un relais SMTP externe (Gmail, SendGrid, etc.)
+# Renommez ce fichier en docker-compose.yml et modifiez les variables ci-dessous
+
+# Variables à modifier :
+# RELAYHOST: smtp.gmail.com:587 (ou votre provider SMTP)
+# RELAYHOST_USERNAME: votre-email@gmail.com
+# RELAYHOST_PASSWORD: votre-mot-de-passe-app
+
+services:
+  postfix:
+    image: boky/postfix
+    container_name: wordpress-postfix
+    environment:
+      HOSTNAME: votre-domaine.com
+      ALLOWED_SENDER_DOMAINS: votre-domaine.com
+      # Configuration pour relais SMTP externe
+      RELAYHOST: smtp.gmail.com:587
+      RELAYHOST_USERNAME: votre-email@gmail.com
+      RELAYHOST_PASSWORD: votre-mot-de-passe-app
+      RELAYHOST_TLS_LEVEL: encrypt
+    ports:
+      - 25:25
+      - 587:587
+    volumes:
+      - postfix_data:/var/spool/postfix
+    restart: always
+RELAY_EOF
+
 # Génération du fichier docker-compose.yml:
 # Améliorations apportées:
 # - Noms de conteneurs explicites avec le préfixe 'wordpress-'
@@ -168,8 +198,14 @@ services:
     environment:
       HOSTNAME: ${SYSTEM_DOMAIN}
       ALLOWED_SENDER_DOMAINS: ${SYSTEM_DOMAIN}
-      RELAYHOST_USERNAME: contact@${SYSTEM_DOMAIN}
-      RELAYHOST_PASSWORD: contact_mail_pass
+      # Configuration pour autoriser l'envoi vers l'extérieur
+      RELAY_DOMAINS: ""
+      MYNETWORKS: "127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 172.16.0.0/12 192.168.0.0/16 10.0.0.0/8"
+      SMTPD_RECIPIENT_RESTRICTIONS: "permit_mynetworks,permit_sasl_authenticated,reject_unauth_destination"
+      SMTPD_RELAY_RESTRICTIONS: "permit_mynetworks,permit_sasl_authenticated,defer_unauth_destination"
+      # Permettre l'envoi direct vers tous les domaines
+      POSTFIX_myhostname: ${SYSTEM_DOMAIN}
+      POSTFIX_mydestination: "localhost"
     ports:
       - 25:25    # Port SMTP standard
       - 587:587  # Port submission SMTP
@@ -208,11 +244,25 @@ echo "   WordPress est accessible IMMÉDIATEMENT"
 echo "   ⚠️  Patientez 2-3 minutes pour la configuration complète des emails"
 echo "   Les emails ne fonctionneront qu'après cette installation automatique"
 echo ""
+echo "📧 ATTENTION - Envoi d'emails sur serveur cloud :"
+echo "   Postfix est configuré pour l'envoi direct vers l'extérieur"
+echo "   ⚠️  Certains hébergeurs cloud bloquent le port 25 sortant"
+echo "   Si les emails ne fonctionnent pas :"
+echo "   1. Modifiez docker-compose-relay.yml.example"
+echo "   2. Remplacez docker-compose.yml par ce fichier"
+echo "   3. Redémarrez : docker compose down && docker compose up -d"
+echo ""
 echo "🔧 Noms des conteneurs :"
 echo "   • wordpress-dev"
 echo "   • wordpress-db" 
 echo "   • wordpress-phpmyadmin"
 echo "   • wordpress-postfix"
+echo ""
+echo "📁 Fichiers générés :"
+echo "   • docker-compose.yml (configuration principale)"
+echo "   • docker-compose-relay.yml.example (alternative avec relais SMTP)"
+echo "   • uploads.ini (configuration PHP)"
+echo "   • init-wordpress.sh (script d'initialisation SSMTP)"
 echo ""
 echo "⚡ Améliorations du démarrage :"
 echo "   • Healthcheck MariaDB pour éviter les erreurs de timing"
