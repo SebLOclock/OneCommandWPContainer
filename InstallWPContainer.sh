@@ -31,9 +31,12 @@ sudo apt-get update
 sudo apt-get install -y docker-compose-plugin
 
 # Détection du nom de domaine du système:
+SYSTEM_HOSTNAME=$(hostname)
 SYSTEM_DOMAIN=$(hostname -f)
-if [ -z "$SYSTEM_DOMAIN" ] || [ "$SYSTEM_DOMAIN" = "localhost" ]; then
-    SYSTEM_DOMAIN=$(hostname).local
+
+# Si le domaine complet n'est pas disponible ou si c'est localhost, on crée un domaine local
+if [ -z "$SYSTEM_DOMAIN" ] || [ "$SYSTEM_DOMAIN" = "localhost" ] || [ "$SYSTEM_DOMAIN" = "$SYSTEM_HOSTNAME" ]; then
+    SYSTEM_DOMAIN="${SYSTEM_HOSTNAME}.local"
 fi
 
 echo "📧 Utilisation du domaine système : $SYSTEM_DOMAIN"
@@ -60,7 +63,8 @@ max_input_time = 300
 # - Ajout de Postfix pour la gestion professionnelle des envois de mail
 # - Configuration automatique de WordPress pour utiliser Postfix comme serveur SMTP
 # - Ajout des dépendances entre conteneurs pour un démarrage ordonné
-echo "services:
+cat > docker-compose.yml << EOF
+services:
   wordpress:
     image: wordpress
     container_name: wordpress-dev
@@ -81,7 +85,7 @@ echo "services:
         define('SMTP_PORT', 587);
         define('SMTP_SECURE', false);
         define('SMTP_AUTH', false);
-        define('SMTP_FROM', 'contact@$SYSTEM_DOMAIN');
+        define('SMTP_FROM', 'contact@${SYSTEM_DOMAIN}');
         define('SMTP_FROMNAME', 'Contact');
     ports:
       - 80:80
@@ -117,11 +121,13 @@ echo "services:
       - db
 
   postfix:
-    image: catatnight/postfix
+    image: boky/postfix
     container_name: wordpress-postfix
     environment:
-      maildomain: $SYSTEM_DOMAIN
-      smtp_user: contact@$SYSTEM_DOMAIN:contact_mail_pass
+      HOSTNAME: ${SYSTEM_DOMAIN}
+      ALLOWED_SENDER_DOMAINS: ${SYSTEM_DOMAIN}
+      RELAYHOST_USERNAME: contact@${SYSTEM_DOMAIN}
+      RELAYHOST_PASSWORD: contact_mail_pass
     ports:
       - 25:25    # Port SMTP standard
       - 587:587  # Port submission SMTP
@@ -132,7 +138,7 @@ echo "services:
 volumes:
   data:
   postfix_data:
-" > docker-compose.yml
+EOF
 
 # Ajouter docker au démarrage de la machine
 systemctl enable docker

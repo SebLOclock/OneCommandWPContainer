@@ -1,0 +1,74 @@
+services:
+  wordpress:
+    image: wordpress
+    container_name: wordpress-dev
+    volumes:
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+      - ../..:/workspaces:cached
+      - ../wordpress:/var/www/html:cached
+      - ~/.ssh:/root/.ssh:cached
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wp_user
+      WORDPRESS_DB_PASSWORD: wp_pass
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DEBUG: 1
+      # Configuration pour l'envoi de mail via Postfix
+      WORDPRESS_CONFIG_EXTRA: |
+        define('SMTP_HOST', 'postfix');
+        define('SMTP_PORT', 587);
+        define('SMTP_SECURE', false);
+        define('SMTP_AUTH', false);
+        define('SMTP_FROM', 'contact@main.local');
+        define('SMTP_FROMNAME', 'Contact');
+    ports:
+      - 80:80
+    restart: always
+    depends_on:
+      - db
+      - postfix
+
+  db:
+    image: mariadb:10
+    container_name: wordpress-db
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wp_user
+      MYSQL_PASSWORD: wp_pass
+      MYSQL_RANDOM_ROOT_PASSWORD: '1'
+    ports:
+      - 3306:3306
+    volumes:
+      - data:/var/lib/mysql
+    restart: always
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: wordpress-phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+    ports:
+      - 8080:80
+    restart: always
+    depends_on:
+      - db
+
+  postfix:
+    image: boky/postfix
+    container_name: wordpress-postfix
+    environment:
+      HOSTNAME: main.local
+      ALLOWED_SENDER_DOMAINS: main.local
+      RELAYHOST_USERNAME: contact@main.local
+      RELAYHOST_PASSWORD: contact_mail_pass
+    ports:
+      - 25:25    # Port SMTP standard
+      - 587:587  # Port submission SMTP
+    volumes:
+      - postfix_data:/var/spool/postfix
+    restart: always
+    
+volumes:
+  data:
+  postfix_data:
