@@ -21,8 +21,8 @@ Un seul script pour déployer WordPress, MariaDB, phpMyAdmin et Postfix avec ges
 ### 📧 **Gestion avancée des emails**
 - **SSMTP** installé automatiquement dans WordPress
 - **Configuration automatique** du relais vers Postfix
-- **Domaine système** détecté automatiquement
-- **Adresse contact@[votre-domaine]** configurée
+- **Détection intelligente du domaine** (serveurs cloud .eddi.xyz → .eddi.cloud)
+- **Adresse contact@[votre-domaine]** configurée automatiquement
 - **Alternative Gmail** prête à l'emploi pour serveurs cloud
 
 ### 🔧 **Configuration optimisée**
@@ -48,6 +48,20 @@ Un seul script pour déployer WordPress, MariaDB, phpMyAdmin et Postfix avec ges
 - **Réseau** : Accès internet pour téléchargements
 - **Ports** : 80, 3306, 8080, 25, 587 disponibles
 
+## 🔍 Détection intelligente du domaine
+
+Le script détecte automatiquement votre domaine et l'adapte pour les serveurs cloud :
+
+**Exemples de conversion automatique** :
+- `hostname -f` : `sebloclock-server.cloud.eddi.xyz.local` 
+- **→ Converti en** : `sebloclock-server.eddi.cloud`
+- **→ Emails depuis** : `contact@sebloclock-server.eddi.cloud`
+
+**Compatibilité** :
+- ✅ **Serveurs locaux** : `monserveur.local`
+- ✅ **Serveurs cloud** : Conversion automatique des domaines internes
+- ✅ **Domaines personnalisés** : Préservés tels quels
+
 ## 🚀 Installation
 
 ### Installation rapide :
@@ -55,13 +69,44 @@ Un seul script pour déployer WordPress, MariaDB, phpMyAdmin et Postfix avec ges
 sudo bash InstallWPContainer.sh
 ```
 
+**Affichage simplifié** :
+```
+🎉 Installation WordPress terminée !
+
+🌐 Accès aux services :
+   • WordPress    : http://localhost
+   • phpMyAdmin   : http://localhost:8080
+
+📧 Configuration email :
+   • Domaine      : sebloclock-server.eddi.cloud
+   • Expéditeur   : contact@sebloclock-server.eddi.cloud
+   • Serveur SMTP : Postfix (ports 25/587)
+
+⏳ WordPress est accessible immédiatement
+⚠️  Emails opérationnels dans 2-3 minutes
+```
+
 ### Étapes du script :
-1. **Détection du domaine système** automatique
+1. **Détection intelligente du domaine** (conversion automatique serveurs cloud)
 2. **Installation Docker** + Docker Compose
 3. **Génération des configurations** (docker-compose.yml, etc.)
 4. **Démarrage des conteneurs** avec ordre de dépendance
 5. **Configuration SSMTP** en arrière-plan (2-3 minutes)
 
+## 📧 Configuration des emails
+
+### 🟢 **Mode automatique (par défaut)**
+Les emails sont envoyés directement via Postfix avec le domaine détecté :
+- ✅ **Adresse automatique** : `contact@[votre-domaine-détecté]`
+- ✅ **Configuration SSMTP** : Automatique via relais Postfix
+- ⚠️ Peut être bloqué sur certains hébergeurs cloud (port 25)
+
+### 🔵 **Mode Gmail (serveurs cloud)**
+Si les emails ne fonctionnent pas, utilisez Gmail comme relais :
+
+1. **Préparez Gmail** : Validation 2 étapes + mot de passe d'application
+2. **Éditez** : `cd wordpress && nano docker-compose-gmail.yml`  
+3. **Activez** : `cp docker-compose-gmail.yml docker-compose.yml && docker compose up -d`
 
 ## 📁 Fichiers générés
 
@@ -118,13 +163,19 @@ sudo bash InstallWPContainer.sh
 ```
 
 ### Emails non reçus
-1. **Vérifiez les logs Postfix** :
+1. **Vérifiez la détection du domaine** :
+   ```bash
+   # Le script affiche le domaine détecté
+   # Si incorrect, modifiez manuellement docker-compose.yml
+   ```
+
+2. **Vérifiez les logs Postfix** :
    ```bash
    docker compose logs postfix | grep reject
    ```
 
-2. **Si "Access denied"** → Utilisez la configuration Gmail
-3. **Si pas d'erreur** → Vérifiez vos spams
+3. **Si "Access denied"** → Utilisez la configuration Gmail
+4. **Si pas d'erreur** → Vérifiez vos spams
 
 ### Base de données inaccessible
 ```bash
@@ -138,10 +189,13 @@ docker compose restart db
 
 Le script est optimisé pour les serveurs cloud (AWS, OVH, DigitalOcean, etc.) :
 
-- ✅ **Détection automatique** du nom de domaine
-- ✅ **Configuration réseau** adaptée
-- ✅ **Alternative Gmail** pour contournement des restrictions
+- ✅ **Détection intelligente** du domaine public (conversion .eddi.xyz → .eddi.cloud)
+- ✅ **Configuration réseau** adaptée aux environnements cloud
+- ✅ **Alternative Gmail** pour contournement des restrictions SMTP
 - ✅ **Healthchecks** pour démarrage fiable
+- ✅ **Messages simplifiés** pour un retour d'information clair
+
+**Nouveauté** : Le script reconnaît automatiquement les serveurs cloud et adapte la configuration email pour une compatibilité maximale.
 
 ## 📞 Support
 
